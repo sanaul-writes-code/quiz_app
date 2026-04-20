@@ -56,7 +56,7 @@ class _QuizScreenState extends State<QuizScreen> {
 
   void _prepareQuestion() {
     if (_questions.isEmpty) return;
-    _currentAnswers = _questions[_currentIndex].shuffledAnswers;
+    _currentAnswers = _questions[_currentIndex].allAnswers;
     _answered = false;
     _selectedAnswer = null;
   }

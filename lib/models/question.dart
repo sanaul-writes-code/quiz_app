@@ -15,30 +15,32 @@ class Question {
     required this.category,
   });
 
+  // Factory constructor — converts raw JSON map -> Question object
   factory Question.fromJson(Map<String, dynamic> json) {
     final rawAnswers = (json['answers'] as List? ?? [])
         .whereType<Map<String, dynamic>>()
-        .where((answer) => (answer['text'] ?? '').toString().isNotEmpty)
+        .where((a) => (a['text'] ?? '').toString().isNotEmpty)
         .toList();
 
     final correct = rawAnswers.firstWhere(
-      (answer) => answer['isCorrect'] == true,
+      (a) => a['isCorrect'] == true,
       orElse: () => {'text': ''},
     );
 
     return Question(
       id: (json['id'] ?? '').toString(),
       question: (json['text'] ?? '').toString(),
-      answers: rawAnswers.map((answer) => answer['text'].toString()).toList(),
+      answers: rawAnswers.map((a) => a['text'].toString()).toList(),
       correctAnswer: (correct['text'] ?? '').toString(),
       difficulty: (json['difficulty'] ?? '').toString(),
       category: (json['category'] ?? '').toString(),
     );
   }
 
-  List<String> get shuffledAnswers {
-    final items = [...answers];
-    items.shuffle();
-    return items;
+  // Returns available answers shuffled
+  List<String> get allAnswers {
+    final list = [...answers];
+    list.shuffle();
+    return list;
   }
 }
