@@ -31,10 +31,7 @@ class _QuizScreenState extends State<QuizScreen> {
       if (apiKey.isEmpty) {
         throw Exception('Missing QUIZ_API_KEY. Use --dart-define.');
       }
-      final qs = await TriviaService.fetchQuestions(
-        apiKey: apiKey,
-        limit: 10,
-      );
+      final qs = await TriviaService.fetchQuestions(apiKey: apiKey, limit: 10);
       setState(() {
         _questions = qs;
         _loading = false;
@@ -65,6 +62,19 @@ class _QuizScreenState extends State<QuizScreen> {
       _answered = true;
       if (answer == correct) _score++;
     });
+    
+    final isCorrect = answer == correct;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(isCorrect ? '✅ Correct!' : '❌ Wrong! Correct: $correct'),
+        backgroundColor: isCorrect
+            ? Colors.green.shade700
+            : Colors.red.shade700,
+        duration: const Duration(milliseconds: 1200),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
     // Auto-advance after 1.5 seconds
     Future.delayed(const Duration(milliseconds: 1500), _nextQuestion);
   }
@@ -75,10 +85,7 @@ class _QuizScreenState extends State<QuizScreen> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => ResultScreen(
-            score: _score,
-            total: _questions.length,
-          ),
+          builder: (_) => ResultScreen(score: _score, total: _questions.length),
         ),
       );
     } else {
@@ -108,24 +115,36 @@ class _QuizScreenState extends State<QuizScreen> {
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     if (_errorMessage != null) {
       return Scaffold(
-        body: Center(child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, size: 48, color: Colors.red),
-            const SizedBox(height: 12),
-            Text('Error loading questions', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            Text(_errorMessage!, textAlign: TextAlign.center),
-            const SizedBox(height: 20),
-            ElevatedButton(onPressed: () { setState(() { _loading = true; _errorMessage = null; }); _loadQuestions(); }, child: const Text('Retry')),
-          ],
-        )),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 48, color: Colors.red),
+              const SizedBox(height: 12),
+              Text(
+                'Error loading questions',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              Text(_errorMessage!, textAlign: TextAlign.center),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    _loading = true;
+                    _errorMessage = null;
+                  });
+                  _loadQuestions();
+                },
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
       );
     }
 
@@ -140,14 +159,23 @@ class _QuizScreenState extends State<QuizScreen> {
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 16),
-            child: Center(child: Text('Score: $_score', style: const TextStyle(fontWeight: FontWeight.bold))),
+            child: Center(
+              child: Text(
+                'Score: $_score',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
           ),
         ],
       ),
       body: Column(
         children: [
           // Progress bar
-          LinearProgressIndicator(value: progress, minHeight: 6, color: Colors.teal.shade600),
+          LinearProgressIndicator(
+            value: progress,
+            minHeight: 6,
+            color: Colors.teal.shade600,
+          ),
 
           Expanded(
             child: SingleChildScrollView(
@@ -156,44 +184,85 @@ class _QuizScreenState extends State<QuizScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // Category & difficulty chip row
-                  Wrap(spacing: 8, children: [
-                    Chip(label: Text(q.category, style: const TextStyle(fontSize: 12))),
-                    Chip(label: Text(q.difficulty.toUpperCase(), style: const TextStyle(fontSize: 12))),
-                  ]),
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      Chip(
+                        label: Text(
+                          q.category,
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      ),
+                      Chip(
+                        label: Text(
+                          q.difficulty.toUpperCase(),
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 20),
 
                   // Question text
-                  Text(q.question, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, height: 1.4)),
+                  Text(
+                    q.question,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      height: 1.4,
+                    ),
+                  ),
                   const SizedBox(height: 28),
 
                   // Answer buttons
-                  ..._shuffledAnswers.map((opt) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 300),
-                      decoration: BoxDecoration(
-                        color: _buttonColor(opt),
-                        border: Border.all(color: _buttonBorder(opt), width: 1.5),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: InkWell(
-                        onTap: () => _onAnswerTap(opt),
-                        borderRadius: BorderRadius.circular(12),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 18),
-                          child: Row(
-                            children: [
-                              Expanded(child: Text(opt, style: const TextStyle(fontSize: 16))),
-                              if (_answered && opt == _questions[_currentIndex].correctAnswer)
-                                const Icon(Icons.check_circle, color: Colors.green),
-                              if (_answered && opt == _selectedAnswer && opt != _questions[_currentIndex].correctAnswer)
-                                const Icon(Icons.cancel, color: Colors.red),
-                            ],
+                  ..._shuffledAnswers.map(
+                    (opt) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        decoration: BoxDecoration(
+                          color: _buttonColor(opt),
+                          border: Border.all(
+                            color: _buttonBorder(opt),
+                            width: 1.5,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: InkWell(
+                          onTap: () => _onAnswerTap(opt),
+                          borderRadius: BorderRadius.circular(12),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 14,
+                              horizontal: 18,
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    opt,
+                                    style: const TextStyle(fontSize: 16),
+                                  ),
+                                ),
+                                if (_answered &&
+                                    opt ==
+                                        _questions[_currentIndex].correctAnswer)
+                                  const Icon(
+                                    Icons.check_circle,
+                                    color: Colors.green,
+                                  ),
+                                if (_answered &&
+                                    opt == _selectedAnswer &&
+                                    opt !=
+                                        _questions[_currentIndex].correctAnswer)
+                                  const Icon(Icons.cancel, color: Colors.red),
+                              ],
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  )),
+                  ),
                 ],
               ),
             ),
